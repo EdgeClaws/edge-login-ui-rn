@@ -47,6 +47,7 @@ export const LoginHelpModal: React.FC<Props> = (props: Props) => {
             </View>
           }
           body={lstrings.login_help_qr}
+          maximumHeight="large"
           rightButtonType="touchable"
           onPress={handleQr}
         />
@@ -58,6 +59,7 @@ export const LoginHelpModal: React.FC<Props> = (props: Props) => {
             </View>
           }
           body={lstrings.login_help_recovery}
+          maximumHeight="large"
           rightButtonType="touchable"
           onPress={handleRecovery}
         />
