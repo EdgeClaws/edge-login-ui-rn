@@ -180,10 +180,18 @@ export const LoginScene = (props: Props): React.ReactElement => {
     return undefined
   }, [localUsers, activeLoginId, activeUsername])
 
+  // `passwordOnly` routes exist to force a password re-auth, so the PIN flavor
+  // stays unavailable for the whole visit, not just at mount:
   const pinEnabled =
+    !passwordOnly &&
     activeUser != null &&
     (activeUser.pinLoginEnabled || activeUser.touchLoginEnabled)
   const hasWait = pinErrorInfo != null && pinErrorInfo.wait > 0
+
+  // A login captures its credentials when it starts, so switching flavor or
+  // account mid-request would finish the login for an account the UI no longer
+  // shows. Freeze those controls until the in-flight attempt settles:
+  const isLoginInFlight = spinner || biometricBusy || pin.length === 4
 
   const mDropContainerStyle = React.useMemo(() => {
     return { top: inputHeight }
@@ -267,11 +275,14 @@ export const LoginScene = (props: Props): React.ReactElement => {
   })
 
   const handleToggleUsernameList = useHandler(() => {
+    if (isLoginInFlight) return
     if (!showUsernameList) Keyboard.dismiss()
     setShowUsernameList(!showUsernameList)
   })
 
   const handleSelectPassword = useHandler(() => {
+    // Re-tapping the selected pill must not clear what the user has typed:
+    if (isLoginInFlight || flavor === 'password') return
     hasPickedFlavorRef.current = true
     setShowUsernameList(false)
     setFlavor('password')
@@ -279,6 +290,7 @@ export const LoginScene = (props: Props): React.ReactElement => {
   })
 
   const handleSelectPin = useHandler(() => {
+    if (isLoginInFlight || flavor === 'pin') return
     if (!pinEnabled) {
       showToast(lstrings.pin_not_enabled_enter_password)
       return
@@ -291,6 +303,7 @@ export const LoginScene = (props: Props): React.ReactElement => {
   })
 
   const handleSelectUser = useHandler((userInfo: LoginUserInfo) => {
+    if (isLoginInFlight) return
     hasPickedFlavorRef.current = true
     setShowUsernameList(false)
     setActiveLoginId(userInfo.loginId)
@@ -305,7 +318,10 @@ export const LoginScene = (props: Props): React.ReactElement => {
       userInfo.pinLoginEnabled || userInfo.touchLoginEnabled
     if (nextPinEnabled && userInfo.username == null) {
       // Guest/light accounts have no username, so password login is impossible:
-      // jump straight to the PIN/biometric flavor.
+      // jump straight to the PIN/biometric flavor. This is the one path that
+      // reaches the PIN flavor on a `passwordOnly` route, and it has to: there
+      // is no password to re-enter for such an account, so refusing would leave
+      // the scene with no usable way in.
       setFlavor('pin')
     } else if (flavor === 'pin' && !nextPinEnabled) {
       // Auto-toggle back to the password flavor with the selected username:
