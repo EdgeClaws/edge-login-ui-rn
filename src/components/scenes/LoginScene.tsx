@@ -1061,7 +1061,12 @@ const findSeedUser = (
   if (username !== '') {
     return localUsers.find(user => user.username === username)
   }
-  return undefined
+  // Nothing in the route identifies a user, so fall back to the most recently
+  // used account (`arrangeUsers` sorts by last login). Without this a device
+  // with a single saved account has no way to select it: the username dropdown
+  // only appears for two or more accounts, so `activeUser` would stay unset and
+  // the PIN/biometric flavor would sit greyed out.
+  return localUsers[0]
 }
 
 const getDisplayUsername = (
