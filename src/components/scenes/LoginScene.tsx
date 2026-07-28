@@ -180,10 +180,11 @@ export const LoginScene = (props: Props): React.ReactElement => {
     return undefined
   }, [localUsers, activeLoginId, activeUsername])
 
-  // `passwordOnly` routes exist to force a password re-auth, so the PIN flavor
-  // stays unavailable for the whole visit, not just at mount:
+  // `passwordOnly` picks the STARTING flavor and nothing more: every caller
+  // (Landing "Sign in", the startup route, the OTP retry, new-account sign-in)
+  // is an ordinary entry point, not a re-auth boundary. Gating `pinEnabled` on
+  // it would strand guest accounts, which have no username or password to type.
   const pinEnabled =
-    !passwordOnly &&
     activeUser != null &&
     (activeUser.pinLoginEnabled || activeUser.touchLoginEnabled)
   const hasWait = pinErrorInfo != null && pinErrorInfo.wait > 0
@@ -318,10 +319,7 @@ export const LoginScene = (props: Props): React.ReactElement => {
       userInfo.pinLoginEnabled || userInfo.touchLoginEnabled
     if (nextPinEnabled && userInfo.username == null) {
       // Guest/light accounts have no username, so password login is impossible:
-      // jump straight to the PIN/biometric flavor. This is the one path that
-      // reaches the PIN flavor on a `passwordOnly` route, and it has to: there
-      // is no password to re-enter for such an account, so refusing would leave
-      // the scene with no usable way in.
+      // jump straight to the PIN/biometric flavor.
       setFlavor('pin')
     } else if (flavor === 'pin' && !nextPinEnabled) {
       // Auto-toggle back to the password flavor with the selected username:
